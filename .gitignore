@@ -1,0 +1,29 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Python cache/build files
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+
+# Local/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Generated files
+result/
+results/
+*.pdf
+
+# Logs
+*.log
