@@ -1,0 +1,23 @@
+.venv/
+env/
+.env/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Generated PDFs and local working output
+result/
+results/
+*.pdf
+
+# Logs
+*.log
