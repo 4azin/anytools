@@ -25,5 +25,21 @@ result/
 results/
 *.pdf
 
+# Downloaded/generated media
+downloads/
+outputs/
+*.mp3
+*.mp4
+*.m4a
+*.wav
+*.webm
+
+# Model/checkpoint artifacts
+checkpoint/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+
 # Logs
 *.log
