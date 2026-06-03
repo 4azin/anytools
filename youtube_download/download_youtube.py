@@ -1,4 +1,7 @@
 from pathlib import Path
+import shutil
+import subprocess
+import time
 
 import yt_dlp
 
@@ -26,12 +29,17 @@ AUDIO_FORMAT_CHOICES = {
 
 def build_video_format(quality):
     if quality is None:
-        return "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+        return (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
+            "bestvideo+bestaudio/"
+            "best[ext=mp4][vcodec!=none][acodec!=none]/"
+            "best[vcodec!=none][acodec!=none]"
+        )
 
     return (
         f"bestvideo[height<={quality}][ext=mp4]+bestaudio[ext=m4a]/"
         f"bestvideo[height<={quality}]+bestaudio/"
-        f"best[height<={quality}]"
+        f"best[height<={quality}][vcodec!=none][acodec!=none]"
     )
 
 
@@ -47,6 +55,59 @@ def download_with_options(url, ydl_opts):
         ydl.download([url])
 
 
+def find_latest_output(pattern, started_at):
+    matches = [
+        path
+        for path in OUTPUT_DIR.glob(pattern)
+        if path.stat().st_mtime >= started_at - 1
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda path: path.stat().st_mtime)
+
+
+def has_audio_stream(file_path):
+    if shutil.which("ffprobe") is None:
+        return None
+
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a",
+            "-show_entries",
+            "stream=index",
+            "-of",
+            "csv=p=0",
+            str(file_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return bool(result.stdout.strip())
+
+
+def verify_merged_audio(started_at):
+    merged_file = find_latest_output("*_merged.mp4", started_at)
+    if merged_file is None:
+        print("Could not find the merged output file to verify audio.")
+        return
+
+    audio_state = has_audio_stream(merged_file)
+    if audio_state is None:
+        print("Could not verify audio stream because ffprobe is unavailable.")
+        return
+    if not audio_state:
+        raise RuntimeError(f"Merged file has no audio stream: {merged_file}")
+
+    print(f"Audio stream verified: {merged_file.name}")
+
+
 def make_common_options(output_suffix):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     return {
@@ -58,10 +119,12 @@ def make_common_options(output_suffix):
 
 
 def download_merged_video(url, quality):
+    started_at = time.time()
     ydl_opts = {
         **make_common_options("merged"),
         "format": build_video_format(quality),
         "merge_output_format": "mp4",
+        "format_sort": ["res", "ext:mp4:m4a"],
         "postprocessors": [
             {
                 "key": "FFmpegVideoConvertor",
@@ -70,6 +133,7 @@ def download_merged_video(url, quality):
         ],
     }
     download_with_options(url, ydl_opts)
+    verify_merged_audio(started_at)
 
 
 def download_video_only(url, quality):

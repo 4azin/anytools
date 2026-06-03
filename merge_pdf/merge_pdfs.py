@@ -16,11 +16,35 @@ except ImportError:
     PdfWriter = None
 
 
+def build_missing_dependency_message() -> str:
+    venv_python = BASE_DIR / "venv" / "Scripts" / "python.exe"
+    requirements_path = BASE_DIR / "requirements.txt"
+
+    message_lines = [
+        "pypdf could not be imported by the current Python interpreter.",
+        f"Current interpreter: {sys.executable}",
+    ]
+
+    if venv_python.exists():
+        message_lines.extend(
+            [
+                "Install dependencies into the project virtual environment with:",
+                f'  "{venv_python}" -m pip install -r "{requirements_path}"',
+                "Then run the script with:",
+                f'  "{venv_python}" "{BASE_DIR / "merge_pdfs.py"}"',
+            ]
+        )
+    else:
+        message_lines.append(
+            "Install it with: pip install -r requirements.txt"
+        )
+
+    return "\n".join(message_lines)
+
+
 def merge_pdfs(input_paths: list[Path], output_path: Path) -> None:
     if PdfWriter is None:
-        raise RuntimeError(
-            "pypdf is not installed. Run `pip install pypdf` first."
-        )
+        raise RuntimeError(build_missing_dependency_message())
 
     if not input_paths:
         raise ValueError("Enter at least one PDF file to merge.")
